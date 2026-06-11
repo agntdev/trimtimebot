@@ -1,0 +1,41 @@
+{
+  "phase": "dev",
+  "tasks": [
+    {
+      "key": "core",
+      "kind": "foundation",
+      "title": "Bot skeleton: grammY config, SQLite schema (users/services/slots/appointments/schedule_days/reminded_at), update router, per-chat FSM, /start registration, /help, fallbacks, seed the 3 services (details.md §1, §5, §9)",
+      "depends_on": []
+    },
+    {
+      "key": "admin_schedule",
+      "kind": "feature",
+      "title": "Admin weekly schedule panel /admin_schedule: weekday → open/close times + working-day toggle, regenerate future free slots (details.md §6, §7)",
+      "depends_on": ["core"]
+    },
+    {
+      "key": "booking",
+      "kind": "feature",
+      "title": "Client booking flow /book: service → day → slot → race-safe confirm in one transaction, slot reappears on failure (details.md §2)",
+      "depends_on": ["core", "admin_schedule"]
+    },
+    {
+      "key": "manage",
+      "kind": "feature",
+      "title": "Appointment management: /my list with cancel buttons, /cancel confirm dialog + slot reactivation (details.md §3, §4)",
+      "depends_on": ["booking"]
+    },
+    {
+      "key": "reminder",
+      "kind": "feature",
+      "title": "Daily 10:00 ReminderScheduler tick: per-appointment DM with idempotent reminded_at stamp so a restart cannot double-send (details.md §8)",
+      "depends_on": ["manage"]
+    },
+    {
+      "key": "polish",
+      "kind": "integration",
+      "title": "Wire all flows end-to-end, timezone/restart safety pass, error fallbacks everywhere, admin gate on /admin_schedule (details.md §9, design.md §5)",
+      "depends_on": ["booking", "admin_schedule", "manage", "reminder"]
+    }
+  ]
+}
