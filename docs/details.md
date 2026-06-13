@@ -33,14 +33,16 @@ Entry: `/book` or CB `menu:book`. State machine, all steps inline-driven:
 1. **Service** — inline keyboard with the three services
    `Стрижка · 30 мин` `Борода · 15 мин` `Комплекс · 45 мин`. CB
    `svc:<code>`.
-2. **Day** — the next 7 calendar days that have ≥1 free slot for the
+2. **Day** — the **current week's days** (Mon–Sun) that have ≥1 free slot for the
    chosen service. Each slot must fit inside the open window
    (e.g. for `Борода` 15 min, all 30-min slots 9:00–17:30 are valid; for
    `Комплекс` 45 min, only slots 9:00–17:15 are valid). Label
    `Чт 12.06`. CB `day:<YYYY-MM-DD>`.
 3. **Slot** — bookable start times for that day. A start time T is
-   bookable iff `T + service.duration` does not exceed the day's
-   `close_time` and the slot row has `is_booked=0`. CB `slot:<id>`.
+   bookable iff:
+   - T is on the 30-minute grid from `schedule_days` (e.g., 9:00, 9:30, 10:00, etc.)
+   - T + service.duration does not exceed the day's `close_time`
+   - the slot row has `is_booked=0`. CB `slot:<id>`.
 4. **Confirm** — card: `{service} · {date} {time} · {duration} мин` with
    `✅ Подтвердить` (CB `confirm:<slot_id>`) / `⬅️ Назад` /
    `🏠 Меню`.
@@ -49,7 +51,7 @@ Entry: `/book` or CB `menu:book`. State machine, all steps inline-driven:
      (`UPDATE slots SET is_booked=1 WHERE id=? AND is_booked=0` →
      zero rows updated ⇒ race lost ⇒ answerCallbackQuery
      "Слот уже занят 😔" and re-render step 3 with fresh slots);
-   - insert `appointments` (status `confirmed`);
+   - insert `appointments` (status `confirmed`, `created_at=NOW()`);
    - reply receipt: "Записал: {service}, {date} в {time}".
    - The reply has only `🏠 Меню` (no Назад — flow is done).
 6. Any `/command` mid-flow resets state to `idle` and runs that command.
@@ -70,7 +72,7 @@ Entry: `/cancel`, CB `menu:cancel`, or the `❌` button from /my.
 2. On yes, in one transaction: appointment `status=cancelled`; its
    slot `is_booked=0` (the slot reappears in §2 step 3 immediately).
 3. Only the owning client can cancel; a foreign id → "Запись не найдена".
-   Already-started appointments are not listed and not cancellable.
+   Appointments with `starts_at <= now()` are not listed and not cancellable.
 
 ## 5. /help
 
@@ -84,40 +86,4 @@ Entry: `/admin_schedule` (admin only — non-admin: "Команда доступ
 1. **Weekday** — inline list Mon–Sun. CB `sched:day:<0-6>`.
 2. For the chosen weekday, render the current
    `open_time` / `close_time` and a toggle "Рабочий день: Вкл/Выкл"
-   (CB `sched:toggle:<0-6>`). Two time fields follow:
-   `Открытие: HH:MM` (CB `sched:open:<0-6>` → text step) and
-   `Закрытие: HH:MM` (CB `sched:close:<0-6>` → text step).
-   Each time step accepts `HH:MM` (24h); invalid → re-ask.
-3. `💾 Сохранить` (CB `sched:save:<0-6>`) → upsert the
-   `schedule_days` row; regenerate **future** free slots for that
-   weekday (booked slots are never deleted; off slots that have no
-   appointment are deleted).
-4. Reply "Расписание на {weekday} сохранено: {open}–{close},
-   {n} окон".
-
-## 7. /admin_schedule (alternate entry — current day)
-
-`/admin_schedule today` (admin only) jumps straight to step 3 for today's
-weekday, showing the current open/close + slot count.
-
-## 8. Daily 10:00 reminder (System)
-
-A scheduler tick runs **every day at 10:00** in `SHOP_TZ`:
-- Select all `confirmed` appointments with `starts_at` on the current
-  local date, joined to the user.
-- For each: send "Сегодня в HH:MM — {service} ({duration} мин). Если
-  plans changed — /cancel."
-- Idempotent per (appointment, date) via a `reminded_at` stamp on the
-  appointment row, so a restart cannot double-send.
-
-## 9. Fallbacks & errors
-
-- Unknown command → "Не понял. /help — список команд" + main menu.
-- Stray text with state `idle` → same as unknown command.
-- Stray text with a non-idle state and no matching handler → "Я вас
-  слушаю — выберите кнопку или /cancel" + the flow's current card.
-- Callback for a stale message (slot taken / appointment gone) →
-  answerCallbackQuery "Устарело, начните заново" + main menu.
-- Any handler error → log, generic
-  "Что-то пошло не так, попробуйте ещё раз"; state resets to `idle`.
-  The update loop never crashes on a single update.
+   (CB `sched:toggle:<0
