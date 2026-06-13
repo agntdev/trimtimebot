@@ -88,6 +88,7 @@ CREATE TABLE IF NOT EXISTS schedule_days (
 );
 
 CREATE INDEX IF NOT EXISTS idx_slots_starts_at ON slots(starts_at);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_slots_starts_at ON slots(starts_at);
 CREATE INDEX IF NOT EXISTS idx_appointments_user ON appointments(user_tg_id);
 CREATE INDEX IF NOT EXISTS idx_appointments_slot ON appointments(slot_id);
 `;

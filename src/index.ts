@@ -1,5 +1,6 @@
 import { Bot } from "grammy";
 import { getDb } from "./db/index.js";
+import { registerAdminSchedule } from "./admin_schedule.js";
 
 const token = process.env.BOT_TOKEN;
 if (!token) {
@@ -10,6 +11,8 @@ if (!token) {
 const db = getDb();
 
 const bot = new Bot(token);
+
+registerAdminSchedule(bot, db);
 
 bot.command("start", async (ctx) => {
   await ctx.reply("TrimTimeBot is running.");
